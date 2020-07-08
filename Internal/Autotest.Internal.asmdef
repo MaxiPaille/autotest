@@ -1,0 +1,16 @@
+{
+    "name": "Autotest.Internal",
+    "references": [
+        "GUID:cf9b02bb3b890ef41a78aeebb4bf3eaf"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "AUTOTEST"
+    ],
+    "versionDefines": []
+}

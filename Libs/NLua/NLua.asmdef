@@ -1,0 +1,23 @@
+{
+    "name": "NLua",
+    "references": [
+        "GUID:81fc5a824e47a7849973c103b2a76805"
+    ],
+    "includePlatforms": [
+        "Android",
+        "Editor",
+        "iOS",
+        "macOSStandalone",
+        "WindowsStandalone32",
+        "WindowsStandalone64"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "AUTOTEST"
+    ],
+    "versionDefines": []
+}
