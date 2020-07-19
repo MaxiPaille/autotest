@@ -1,7 +1,7 @@
 {
     "name": "Autotest",
     "references": [
-        "GUID:8247e217a6e4f454bae436ebc0c4f328"
+        "GUID:e982be05c6ba9478abf57014d7e063a4"
     ],
     "includePlatforms": [
         "Android",

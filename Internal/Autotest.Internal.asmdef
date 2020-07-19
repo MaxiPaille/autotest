@@ -1,7 +1,7 @@
 {
     "name": "Autotest.Internal",
     "references": [
-        "GUID:cf9b02bb3b890ef41a78aeebb4bf3eaf"
+        "GUID:37670d713b74e4139979b405be659f0c"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

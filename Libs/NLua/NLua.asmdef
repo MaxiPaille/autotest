@@ -1,7 +1,7 @@
 {
     "name": "NLua",
     "references": [
-        "GUID:81fc5a824e47a7849973c103b2a76805"
+        "GUID:fab1812a29b824643b20ecef06a69cee"
     ],
     "includePlatforms": [
         "Android",
