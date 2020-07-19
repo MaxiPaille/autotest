@@ -26,26 +26,36 @@ namespace KeraLua
     [SuppressUnmanagedCodeSecurity]
     internal static class NativeMethods
     {
-
-#if __TVOS__ && __UNIFIED__
-        private const string LuaLibraryName = "@rpath/liblua54.framework/liblua54";
-#elif __WATCHOS__ && __UNIFIED__
-        private const string LuaLibraryName = "@rpath/liblua54.framework/liblua54";
-#elif __IOS__ && __UNIFIED__
-        private const string LuaLibraryName = "@rpath/liblua54.framework/liblua54";
-#elif __ANDROID__
-        private const string LuaLibraryName = "liblua54.so";
-#elif __MACOS__ 
-        private const string LuaLibraryName = "liblua54.dylib";
-#elif WINDOWS_UWP
-        private const string LuaLibraryName = "lua54.dll";
-#else
-        private const string LuaLibraryName = "lua54";
+        
+#if UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN
+    private const string LuaLibraryName = "lua54";
+#elif UNITY_EDITOR_OSX || UNITY_STANDALONE_OSX
+    private const string LuaLibraryName = "liblua54.dylib";
+#elif UNITY_ANDROID
+    private const string LuaLibraryName = "liblua54.so";
+#elif UNITY_IOS
+    private const string LuaLibraryName = "@rpath/liblua54.framework/liblua54";
 #endif
+        
+// #if __TVOS__ && __UNIFIED__
+//         private const string LuaLibraryName = "@rpath/liblua54.framework/liblua54";
+// #elif __WATCHOS__ && __UNIFIED__
+//         private const string LuaLibraryName = "@rpath/liblua54.framework/liblua54";
+// #elif __IOS__ && __UNIFIED__
+//         private const string LuaLibraryName = "@rpath/liblua54.framework/liblua54";
+// #elif __ANDROID__
+//         private const string LuaLibraryName = "liblua54.so";
+// #elif __MACOS__ 
+//         private const string LuaLibraryName = "liblua54.dylib";
+// #elif WINDOWS_UWP
+//         private const string LuaLibraryName = "lua54.dll";
+// #else
+//         private const string LuaLibraryName = "lua54";
+// #endif
 
 #pragma warning disable IDE1006 // Naming Styles
 
-        [DllImport (LuaLibraryName, CallingConvention = CallingConvention.Cdecl), MonoPInvokeCallback(typeof(Func<lua_State, int, int>))]
+        [DllImport (LuaLibraryName, CallingConvention = CallingConvention.Cdecl)]
         internal static extern int lua_absindex(lua_State luaState, int idx);
 
         [DllImport(LuaLibraryName, CallingConvention = CallingConvention.Cdecl)]
