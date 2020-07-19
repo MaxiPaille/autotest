@@ -1,4 +1,6 @@
-﻿using System;
+﻿#define NETSTANDARD
+
+using System;
 using System.Threading;
 using System.Reflection;
 
