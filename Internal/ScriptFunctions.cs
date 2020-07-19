@@ -1,32 +1,28 @@
 ﻿using System;
 using System.Threading;
-using Autotest.Internal;
 using NLua;
 using UnityEngine;
-using UnityEngine.Assertions;
+using UnityEngine.UI;
 
-namespace Autotest
+#pragma warning disable 0169
+
+namespace Autotest.Internal
 {
 	
 	internal static class ScriptFunctions
 	{
 		
-		public static readonly int frameDelay = 1000 / 60;
-
 		private static void WaitForEnable(GameObject gameObject, float timeout = 0)
 		{
 			DateTime timeoutLimit = DateTime.UtcNow.AddSeconds(timeout);
 			while (true)
 			{
 				if (timeout > 0 && DateTime.UtcNow > timeoutLimit)
-					throw new TimeoutException($"WaitForEnable {timeout}s");
-				
-				Operation operation = AutotestingInternal.unityBinding.ExecuteOnMainThread(() => gameObject.activeInHierarchy);
+					throw new ScriptException("WaitForEnable", $"Timeout {timeout}s");
 
-				while (operation.status == false)
-					Thread.Sleep(frameDelay);
+				bool result = AutotestingInternal.unityBinding.ExecuteOnMainThreadAndWaitForCompletion(() => gameObject.activeInHierarchy);
 
-				if ((bool) operation.result == true)
+				if (result == true)
 					break;
 			}
 		}
@@ -37,14 +33,11 @@ namespace Autotest
 			while (true)
 			{
 				if (timeout > 0 && DateTime.UtcNow > timeoutLimit)
-					throw new TimeoutException($"WaitForDisable {timeout}s");
+					throw new ScriptException("WaitForDisable", $"Timeout {timeout}s");
 				
-				Operation operation = AutotestingInternal.unityBinding.ExecuteOnMainThread(() => gameObject.activeInHierarchy);
+				bool result = AutotestingInternal.unityBinding.ExecuteOnMainThreadAndWaitForCompletion(() => gameObject.activeInHierarchy);
 
-				while (operation.status == false)
-					Thread.Sleep(frameDelay);
-
-				if ((bool) operation.result == false)
+				if (result == false)
 					break;
 			}
 		}
@@ -57,9 +50,9 @@ namespace Autotest
 			while (AutotestingInternal.pendingEvents.ContainsKey(name) == true)
 			{
 				if (timeout > 0 && DateTime.UtcNow > timeoutLimit)
-					throw new TimeoutException($"WaitForEvent {timeout}s");
+					throw new ScriptException("WaitForEvent", $"Timeout {timeout}s");
 				
-				Thread.Sleep(frameDelay);
+				Thread.Sleep(UnityBinding.frameDuration);
 			}
 		}
 		
@@ -78,141 +71,139 @@ namespace Autotest
 			DateTime timeoutLimit = DateTime.UtcNow.AddSeconds(duration);
 
 			while (DateTime.UtcNow < timeoutLimit)
-				Thread.Sleep(frameDelay);
+				Thread.Sleep(UnityBinding.frameDuration);
 		}
 
 		private static void CheckForEnable(GameObject gameObject)
 		{
-			Operation operation = AutotestingInternal.unityBinding.ExecuteOnMainThread(() => gameObject.activeInHierarchy == true);
+			bool result = AutotestingInternal.unityBinding.ExecuteOnMainThreadAndWaitForCompletion(() => gameObject.activeInHierarchy == true);
 
-			while(operation.status == false)
-				Thread.Sleep(frameDelay);
-			
-			if ((bool)operation.result == false)
-				throw new AssertionException($"GameObject '{AutotestingInternal.unityBinding.GetName(gameObject)}' not enabled", "");
+			if (result == false)
+				throw new ScriptException("CheckForEnable", $"GameObject '{AutotestingInternal.unityBinding.GetGameObjectName(gameObject)}' not enabled");
 		}
 		
 		private static void CheckForDisable(GameObject gameObject)
 		{
-			Operation operation = AutotestingInternal.unityBinding.ExecuteOnMainThread(() => gameObject.activeInHierarchy == false);
+			bool result = AutotestingInternal.unityBinding.ExecuteOnMainThreadAndWaitForCompletion(() => gameObject.activeInHierarchy == false);
 
-			while(operation.status == false)
-				Thread.Sleep(frameDelay);
-			
-			if ((bool)operation.result == false)
-				throw new AssertionException($"GameObject '{AutotestingInternal.unityBinding.GetName(gameObject)}' not disabled", "");
+			if (result == false)
+				throw new ScriptException("CheckForDisable", $"GameObject '{AutotestingInternal.unityBinding.GetGameObjectName(gameObject)}' not disabled");
 		}
 
 		private static GameObject SearchForGameObject(string pattern)
 		{
-			Operation operation = AutotestingInternal.unityBinding.ExecuteOnMainThread(() => AutotestingInternal.unityBinding.FindGameObject(pattern));
-			
-			while(operation.status == false)
-				Thread.Sleep(frameDelay);
-
-			return operation.result as GameObject;
+			return AutotestingInternal.unityBinding.ExecuteOnMainThreadAndWaitForCompletion(() => AutotestingInternal.unityBinding.FindGameObject(pattern));
 		}
 
 		private static GameObject GetGameObjectFromPath(string path)
 		{
-			Operation operation = AutotestingInternal.unityBinding.ExecuteOnMainThread(() => AutotestingInternal.unityBinding.GetGameObjectFromPath(path));
-			
-			while(operation.status == false)
-				Thread.Sleep(frameDelay);
+			GameObject result  = AutotestingInternal.unityBinding.ExecuteOnMainThreadAndWaitForCompletion(() => AutotestingInternal.unityBinding.GetGameObjectFromPath(path));
 
-			GameObject result = operation.result as GameObject;
 			if (result == null)
-				throw new AssertionException($"GameObject \"{path}\" does not exists", "");
+				throw new ScriptException("GetGameObjectFromPath", $"GameObject \"{path}\" does not exists");
 			
 			return result;
 		}
 		
 		private static Component GetComponent(GameObject gameObject, ProxyType componentType)
 		{
-			Operation operation = AutotestingInternal.unityBinding.ExecuteOnMainThread(() => gameObject.GetComponent(componentType.UnderlyingSystemType));
-			
-			while(operation.status == false)
-				Thread.Sleep(frameDelay);
-			
-			Component result = operation.result as Component;
+			Component result = AutotestingInternal.unityBinding.ExecuteOnMainThreadAndWaitForCompletion(() => gameObject.GetComponent(componentType.UnderlyingSystemType));
+
 			if (result == null)
-				throw new AssertionException($"Component \"{componentType.UnderlyingSystemType.Name}\" not found on GameObject \"{gameObject.name}\"", "");
+				throw new ScriptException("GetComponent", $"Component \"{componentType.UnderlyingSystemType.Name}\" not found on GameObject \"{gameObject.name}\"");
 			
 			return result;
 		}
 		
 		private static void Log(string message)
 		{
-			Debug.Log(message);
+			AutotestingInternal.log?.Invoke($"[Autotest] {message}");
+			AutotestingInternal.currentScript.logs += $"{message}{Environment.NewLine}";
 		}
 		
 		private static void Error(string type, string message)
 		{
-			throw new Exception($"{type}: {message}");
+			AutotestingInternal.currentScript.logs += $"[Error] {type} - {message}{Environment.NewLine}";
+			throw new ScriptException(type, message);
 		}
 		
 		private static void Click(GameObject gameObject)
 		{
-			Operation operation = AutotestingInternal.unityBinding.ExecuteOnMainThread(() => AutotestingInternal.unityBinding.Click(gameObject));
-
-			while(operation.status == false)
-				Thread.Sleep(frameDelay);
+			AutotestingInternal.unityBinding.ExecuteOnMainThreadAndWaitForCompletion(() => AutotestingInternal.unityBinding.Click(gameObject));
 		}
-		
+
 		private static void Tap(GameObject gameObject)
 		{
-			Operation operation = AutotestingInternal.unityBinding.ExecuteOnMainThread(() => AutotestingInternal.unityBinding.Tap(gameObject));
+			AutotestingInternal.unityBinding.ExecuteOnMainThreadAndWaitForCompletion(() => AutotestingInternal.unityBinding.Tap(gameObject));
+		}
+		
+		private static void InputText(GameObject gameObject, string message)
+		{
+			InputField inputField = null;
+			
+			// Activate input field (set focus)
+			AutotestingInternal.unityBinding.ExecuteOnMainThreadAndWaitForCompletion(() =>
+			{
+				inputField = gameObject.GetComponent<InputField>();
+				
+				if (inputField == null)
+					throw new ScriptException("InputText", $"No input field on the GameObject {gameObject.name}");
+				
+				inputField.ActivateInputField();
+			});
+			
+			// Wait some frames to let Unity apply the focus on the inputField
+			Thread.Sleep(3 * UnityBinding.frameDuration);
 
-			while(operation.status == false)
-				Thread.Sleep(frameDelay);
+			// Set text, trigger onValueChanged and onEndEdit, then unfocus the component
+			AutotestingInternal.unityBinding.ExecuteOnMainThreadAndWaitForCompletion(() =>
+			{
+				inputField.text = message;
+				inputField.DeactivateInputField();
+			});
 		}
 
 		private static void Drag(GameObject target, GameObject origin, GameObject destination, float duration)
 		{
-			Operation operation = AutotestingInternal.unityBinding.ExecuteOnMainThread(() => AutotestingInternal.unityBinding.GetScreenspacePosition(origin));
+			Operation operationA = AutotestingInternal.unityBinding.ExecuteOnMainThread(() => AutotestingInternal.unityBinding.GetScreenspacePosition(origin));
+			Operation operationB = AutotestingInternal.unityBinding.ExecuteOnMainThread(() => AutotestingInternal.unityBinding.GetScreenspacePosition(destination));
 
-			while(operation.status == false)
-				Thread.Sleep(frameDelay);
+			AutotestingInternal.unityBinding.WaitForOperationCompletion(operationA);
+			AutotestingInternal.unityBinding.WaitForOperationCompletion(operationB);
 
-			Vector2 originScreenPosition = (Vector2)operation.result;
-			
-			operation = AutotestingInternal.unityBinding.ExecuteOnMainThread(() => AutotestingInternal.unityBinding.GetScreenspacePosition(destination));
-
-			while(operation.status == false)
-				Thread.Sleep(frameDelay);
-
-			Vector2 destinationScreenPosition = (Vector2)operation.result;
+			Vector2 originScreenPosition = (Vector2)operationA.result;
+			Vector2 destinationScreenPosition = (Vector2)operationB.result;
 
 			DragFromPosition(target, originScreenPosition, destinationScreenPosition, duration);
 		}
 		
 		private static void DragFromPosition(GameObject target, Vector2 origin, Vector2 destination, float duration)
 		{
-			Operation operation = AutotestingInternal.unityBinding.ExecuteOnMainThread(() => AutotestingInternal.unityBinding.BeginDrag(target, origin));
+			AutotestingInternal.unityBinding.ExecuteOnMainThreadAndWaitForCompletion(() => AutotestingInternal.unityBinding.BeginDrag(target, origin));
 
-			while(operation.status == false)
-				Thread.Sleep(frameDelay);
-			
 			DateTime startTime = DateTime.UtcNow;
 			float t = 0;
-			Vector2 previousPosition = origin;
 			while (t < 1)
 			{
 				t = (float)(DateTime.UtcNow - startTime).TotalSeconds / duration;
 				Vector2 position = Vector2.Lerp(origin, destination, t);
 				
-				operation = AutotestingInternal.unityBinding.ExecuteOnMainThread(() => AutotestingInternal.unityBinding.Drag(target, position));
-
-				while(operation.status == false)
-					Thread.Sleep(frameDelay);
+				AutotestingInternal.unityBinding.ExecuteOnMainThreadAndWaitForCompletion(() => AutotestingInternal.unityBinding.Drag(target, position));
 			}
 
-			operation = AutotestingInternal.unityBinding.ExecuteOnMainThread(() => AutotestingInternal.unityBinding.EndDrag(target, destination));
+			AutotestingInternal.unityBinding.ExecuteOnMainThreadAndWaitForCompletion(() => AutotestingInternal.unityBinding.EndDrag(target, destination));
+		}
 
-			while(operation.status == false)
-				Thread.Sleep(frameDelay);
+		private static void Restart()
+		{
+			if (AutotestingInternal.restartApp == null)
+				throw new NotSupportedException("Unable to call Restart because the application does not support it.");
+
+			AutotestingInternal.unityBinding.ExecuteOnMainThreadAndWaitForCompletion(() => AutotestingInternal.restartApp?.Invoke());
 		}
 
 	}
 	
 }
+
+#pragma warning restore 0169

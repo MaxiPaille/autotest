@@ -1,4 +1,4 @@
-﻿namespace Autotest
+﻿namespace Autotest.Internal
 {
     
     internal static class Settings

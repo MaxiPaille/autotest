@@ -7,29 +7,39 @@ using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-namespace Autotest
+namespace Autotest.Internal
 {
 
     public class UnityBinding : MonoBehaviour
     {
 
+        public static int frameDuration { get { return 1000 / s_framerate; } }
+
+
         private ConcurrentQueue<Operation> m_pendingOperations = new ConcurrentQueue<Operation>();
 
         private Dictionary<GameObject, string> m_gameObjectToName = new Dictionary<GameObject, string>();
 
+        private static int s_framerate = 60;
+        
         private void Awake()
         {
             DontDestroyOnLoad(gameObject);
+        }
+
+        private void Start()
+        {
+            s_framerate = Mathf.RoundToInt(1f / Time.deltaTime);
         }
 
         internal void Click(GameObject gameObject)
         {
             Button button = gameObject.GetComponent<Button>();
             if (button == null)
-                throw new Exception("No 'Button' component");
+                throw new ScriptException("Click", "No 'Button' component");
 
             if (button.interactable == false || button.enabled == false || button.gameObject.activeInHierarchy == false)
-                throw new Exception("Button not interactable");
+                throw new ScriptException("Click", "Button not interactable");
 
             ExecuteEvents.Execute(gameObject, new BaseEventData(EventSystem.current), ExecuteEvents.submitHandler);
         }
@@ -43,7 +53,7 @@ namespace Autotest
         /// Begin drag
         /// </summary>
         /// <param name="target">GameObject on which we want to apply the drag</param>
-        /// <param name="origin">Viewport space coordinate [0-1]</param>
+        /// <param name="origin">Screenspace coordinate</param>
         internal void BeginDrag(GameObject target, Vector2 origin)
         {
             PointerEventData pointerEventData = new PointerEventData(EventSystem.current);
@@ -57,7 +67,7 @@ namespace Autotest
         /// Drag
         /// </summary>
         /// <param name="target">GameObject on which we want to apply the drag</param>
-        /// <param name="position">Viewport space coordinate [0-1]</param>
+        /// <param name="position">Screenspace coordinate</param>
         internal void Drag(GameObject target, Vector2 position)
         {
             PointerEventData pointerEventData = new PointerEventData(EventSystem.current);
@@ -70,7 +80,7 @@ namespace Autotest
         /// End drag
         /// </summary>
         /// <param name="target">GameObject on which we want to apply the drag</param>
-        /// <param name="destination">Viewport space coordinate [0-1]</param>
+        /// <param name="destination">Screenspace coordinate</param>
         internal void EndDrag(GameObject target, Vector2 destination)
         {
             PointerEventData pointerEventData = new PointerEventData(EventSystem.current);
@@ -165,11 +175,11 @@ namespace Autotest
             }
 
             string[] split = pattern.Split('/');
-            string name = split[0];
+            string targetName = split[0];
 
             foreach (GameObject root in roots)
             {
-                GameObject result = GetGameObject(name, root.transform);
+                GameObject result = GetGameObject(targetName, root.transform);
 
                 if (result != null)
                 {
@@ -191,7 +201,7 @@ namespace Autotest
             return null;
         }
 
-        internal GameObject GetGameObject(string name, Transform parent)
+        private GameObject GetGameObject(string name, Transform parent)
         {
             if (parent.name == name)
                 return parent.gameObject;
@@ -206,10 +216,10 @@ namespace Autotest
             return null;
         }
 
-        internal GameObject GetGameObject(string[] split, int index, Transform parent)
+        private GameObject GetGameObject(string[] split, int index, Transform parent)
         {
-            string name = split[index];
-            if (parent.name == name)
+            string targetName = split[index];
+            if (parent.name == targetName)
             {
                 if (index == split.Length - 1)
                     return parent.gameObject;
@@ -226,25 +236,25 @@ namespace Autotest
             return null;
         }
 
-        internal string GetName(GameObject gameObject)
+        /// <summary>
+        /// Thread safe method to get the name of a GameObject. This method cache the name of the GameObject for futher usage.
+        /// </summary>
+        /// <param name="target"></param>
+        /// <returns></returns>
+        internal string GetGameObjectName(GameObject target)
         {
-            m_gameObjectToName.TryGetValue(gameObject, out string name);
+            m_gameObjectToName.TryGetValue(target, out string targetName);
 
-            if (name == null)
+            if (targetName == null)
             {
-                Operation opertation = ExecuteOnMainThread(() =>
+                targetName = ExecuteOnMainThreadAndWaitForCompletion(() =>
                 {
-                    m_gameObjectToName[gameObject] = gameObject.name;
-                    return gameObject.name;
+                    m_gameObjectToName[target] = target.name;
+                    return target.name;
                 });
-
-                while (opertation.status == false)
-                    Thread.Sleep(ScriptFunctions.frameDelay);
-
-                name = opertation.result as string;
             }
 
-            return name;
+            return targetName;
         }
 
         internal Operation ExecuteOnMainThread<T>(Func<T> function)
@@ -268,9 +278,46 @@ namespace Autotest
             m_pendingOperations.Enqueue(operation);
             return operation;
         }
+        
+        internal T ExecuteOnMainThreadAndWaitForCompletion<T>(Func<T> function)
+        {
+            Operation operation = new Operation()
+            {
+                methodInfo = function.Method,
+                target = function.Target
+            };
+            m_pendingOperations.Enqueue(operation);
+            
+            WaitForOperationCompletion(operation);
+            
+            return (T)operation.result;
+        }
+        
+        internal void ExecuteOnMainThreadAndWaitForCompletion(Action action)
+        {
+            Operation operation = new Operation()
+            {
+                methodInfo = action.Method,
+                target = action.Target
+            };
+            m_pendingOperations.Enqueue(operation);
+            
+            WaitForOperationCompletion(operation);
+        }
+        
+        internal void WaitForOperationCompletion(Operation operation)
+        {
+            while(operation.status == false)
+                Thread.Sleep(frameDuration);
+
+            if (operation.exception != null)
+                throw operation.exception;
+        }
 
         private void Update()
         {
+            s_framerate = Mathf.RoundToInt(1 / Time.deltaTime);
+
             while (m_pendingOperations.Count > 0)
             {
                 if (m_pendingOperations.TryDequeue(out Operation operation) == false)

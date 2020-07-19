@@ -21,7 +21,7 @@ namespace SimpleHttpServer
         public int Port { get; private set; }
         private TcpListener Listener;
         private HttpProcessor Processor;
-        private bool IsActive = true;
+        //private bool IsActive = true;
 
         #endregion
 
@@ -37,21 +37,21 @@ namespace SimpleHttpServer
             }
         }
 
-        public void Listen()
-        {
-            this.Listener = new TcpListener(IPAddress.Any, this.Port);
-            this.Listener.Start();
-            while (this.IsActive)
-            {
-                TcpClient s = this.Listener.AcceptTcpClient();
-                Thread thread = new Thread(() =>
-                {
-                    this.Processor.HandleClient(s);
-                });
-                thread.Start();
-                Thread.Sleep(1);
-            }
-        }
+        // public void Listen()
+        // {
+        //     this.Listener = new TcpListener(IPAddress.Any, this.Port);
+        //     this.Listener.Start();
+        //     while (this.IsActive)
+        //     {
+        //         TcpClient s = this.Listener.AcceptTcpClient();
+        //         Thread thread = new Thread(() =>
+        //         {
+        //             this.Processor.HandleClient(s);
+        //         });
+        //         thread.Start();
+        //         Thread.Sleep(1);
+        //     }
+        // }
 
         public void ListenAsync()
         {

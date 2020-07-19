@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Reflection;
 
-namespace Autotest
+namespace Autotest.Internal
 {
     
     internal class Operation

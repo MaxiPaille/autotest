@@ -1,8 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-
-namespace Autotest.Internal
+﻿namespace Autotest.Internal
 {
     
     internal static class LuaUtils

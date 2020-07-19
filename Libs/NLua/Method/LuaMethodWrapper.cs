@@ -328,7 +328,7 @@ namespace NLua.Method
 
                 if (!_translator.MatchParameters(luaState, methodToCall,  _lastCalledMethod, 0))
                 {
-                    _translator.ThrowError(luaState, "Invalid arguments to method call");
+                    _translator.ThrowError(luaState, $"Invalid arguments to method call [{methodToCall.ToString()}]");
                     return 1;
                 }
             }

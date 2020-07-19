@@ -40,18 +40,23 @@ namespace SimpleHttpServer
             HttpRequest request = GetRequest((IPEndPoint)tcpClient.Client.RemoteEndPoint, inputStream, outputStream);
 
             // route and handle the request...
-            HttpResponse response = RouteRequest(inputStream, outputStream, request);      
-      
-            Console.WriteLine($"{(int)response.Status} {request.Url}");
+            Thread thread = new Thread(() =>
+            {
+                HttpResponse response = RouteRequest(inputStream, outputStream, request);
+                
+                Console.WriteLine($"{(int)response.Status} {request.Url}");
 
-            WriteResponse(outputStream, response);
+                WriteResponse(outputStream, response);
 
-            outputStream.Flush();
-            outputStream.Close();
-            outputStream = null;
+                outputStream.Flush();
+                outputStream.Close();
+                outputStream = null;
 
-            inputStream.Close();
-            inputStream = null;
+                inputStream.Close();
+                inputStream = null;
+            });
+            
+            thread.Start();
         }
 
         // this formats the HTTP response...

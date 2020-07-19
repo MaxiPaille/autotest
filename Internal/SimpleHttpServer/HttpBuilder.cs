@@ -7,19 +7,24 @@ namespace SimpleHttpServer
     {
         public static HttpResponse InternalServerError()
         {
-            //string content = File.ReadAllText("Resources/Pages/500.html"); 
-
             return new HttpResponse()
             {
                 Status = HttpStatusCode.InternalServerError,
                 ContentAsUTF8 = null
             };
         }
+        
+        public static HttpResponse ExpectationFailed()
+        {
+            return new HttpResponse()
+            {
+                Status = HttpStatusCode.ExpectationFailed,
+                ContentAsUTF8 = null
+            };
+        }
 
         public static HttpResponse NotFound()
         {
-            //string content = File.ReadAllText("Resources/Pages/404.html");
-
             return new HttpResponse()
             {
                 Status = HttpStatusCode.NotFound,
